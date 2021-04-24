@@ -14,6 +14,7 @@ class Tello:
     POSSIBLE_MOVE_DIRECTIONS = ["up", "down", "left", "right", "forward", "back"]
     FEETS_TO_CMS_MULTIPLIER = 30.48
     METERS_TO_CMS_MULTIPLIER = 100
+    SINGLE_PACKET_MAX_BYTES = 1460
 
     def __init__(self, local_ip, local_port, imperial=False, command_timeout=.3, tello_ip='192.168.10.1',
                  tello_port=8889):
@@ -100,16 +101,16 @@ class Tello:
         Runs as a thread, sets self.frame to the most recent frame Tello captured.
 
         """
-        packet_data = ""
+        packet_data = b""
         while True:
             try:
                 res_string, ip = self.socket_video.recvfrom(2048)
                 packet_data += res_string
                 # end of frame
-                if len(res_string) != 1460:
+                if len(res_string) != self.SINGLE_PACKET_MAX_BYTES:
                     for frame in self._h264_decode(packet_data):
                         self.frame = frame
-                    packet_data = ""
+                    packet_data = b""
 
             except socket.error as exc:
                 print(f"Caught exception socket.error: {exc}")
@@ -128,7 +129,7 @@ class Tello:
             (frame, w, h, ls) = framedata
             if frame is not None:
                 frame = np.fromstring(frame, dtype=np.ubyte, count=len(frame), sep='')
-                frame = (frame.reshape((h, ls / 3, 3)))
+                frame = (frame.reshape((h, int(ls / 3), 3)))
                 frame = frame[:, :w, :]
                 res_frame_list.append(frame)
 
