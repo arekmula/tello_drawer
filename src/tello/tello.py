@@ -51,10 +51,8 @@ class Tello:
         self.receive_thread.start()
 
         # to receive video -- send cmd: command, streamon
-        self.socket.sendto(b'command', self.tello_address)
-        print('sent: command')
-        self.socket.sendto(b'streamon', self.tello_address)
-        print('sent: streamon')
+        self.start_controlling_drone()
+        self.set_video_stream(True)
 
         self.socket_video.bind((local_ip, self.local_video_port))
 
@@ -165,6 +163,26 @@ class Tello:
         self.response = None
 
         return response
+
+    def start_controlling_drone(self) -> str:
+        """
+        Enter SDK mode.
+
+        :return: Response from Tello
+        """
+        return self.send_command("command")
+
+    def set_video_stream(self, state: bool) -> str:
+        """
+        Turn on/off streaming tello video stream.
+
+        :param state: if True, then Tello will stream the video. If False then video will not be streamed.
+        :return: Response from Tello
+        """
+        if state:
+            return self.send_command("streamon")
+        else:
+            return self.send_command("streamoff")
 
     def set_abort_flag(self):
         """
