@@ -51,10 +51,8 @@ class Tello:
         self.receive_thread.start()
 
         # to receive video -- send cmd: command, streamon
-        self.socket.sendto(b'command', self.tello_address)
-        print('sent: command')
-        self.socket.sendto(b'streamon', self.tello_address)
-        print('sent: streamon')
+        self.start_controlling_drone()
+        self.set_video_stream(True)
 
         self.socket_video.bind((local_ip, self.local_video_port))
 
@@ -102,7 +100,7 @@ class Tello:
         Runs as a thread, sets self.frame to the most recent frame Tello captured.
 
         """
-        packet_data = ""
+        packet_data = b""
         while True:
             try:
                 res_string, ip = self.socket_video.recvfrom(2048)
@@ -111,7 +109,7 @@ class Tello:
                 if len(res_string) != 1460:
                     for frame in self._h264_decode(packet_data):
                         self.frame = frame
-                    packet_data = ""
+                    packet_data = b""
 
             except socket.error as exc:
                 print(f"Caught exception socket.error: {exc}")
@@ -130,13 +128,13 @@ class Tello:
             (frame, w, h, ls) = framedata
             if frame is not None:
                 frame = np.fromstring(frame, dtype=np.ubyte, count=len(frame), sep='')
-                frame = (frame.reshape((h, ls / 3, 3)))
+                frame = (frame.reshape((h, int(ls / 3), 3)))
                 frame = frame[:, :w, :]
                 res_frame_list.append(frame)
 
         return res_frame_list
 
-    def send_command(self, command: str) -> str:
+    def send_command(self, command) -> str:
         """
         Send a command to the Tello and wait for a response.
 
@@ -149,7 +147,7 @@ class Tello:
         self.abort_flag = False
         timer = threading.Timer(self.command_timeout, self.set_abort_flag)
 
-        self.socket.sendto(command.encode('utf-8'), self.tello_address)
+        self.socket.sendto(command.encode(), self.tello_address)
 
         timer.start()
         while self.response is None:
@@ -165,6 +163,26 @@ class Tello:
         self.response = None
 
         return response
+
+    def start_controlling_drone(self) -> str:
+        """
+        Enter SDK mode.
+
+        :return: Response from Tello
+        """
+        return self.send_command("command")
+
+    def set_video_stream(self, state: bool) -> str:
+        """
+        Turn on/off streaming tello video stream.
+
+        :param state: if True, then Tello will stream the video. If False then video will not be streamed.
+        :return: Response from Tello
+        """
+        if state:
+            return self.send_command("streamon")
+        else:
+            return self.send_command("streamoff")
 
     def set_abort_flag(self):
         """
