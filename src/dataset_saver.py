@@ -18,7 +18,7 @@ def main(args):
     cv2.namedWindow("tello")
     while True:
 
-        key = cv2.waitKey(fps_delay_ms)  # 30 FPS
+        key = cv2.waitKey(fps_delay_ms)
         if key & 0xFF == ord("q"):
             # Exit if q pressed
             cv2.destroyAllWindows()
