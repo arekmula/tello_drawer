@@ -1,0 +1,3 @@
+[submodule "h264decoder"]
+	path = h264decoder
+	url = https://github.com/DaWelter/h264decoder
