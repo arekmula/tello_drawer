@@ -135,7 +135,7 @@ class Tello:
 
         return res_frame_list
 
-    def send_command(self, command: str) -> str:
+    def send_command(self, command) -> str:
         """
         Send a command to the Tello and wait for a response.
 
@@ -148,7 +148,7 @@ class Tello:
         self.abort_flag = False
         timer = threading.Timer(self.command_timeout, self.set_abort_flag)
 
-        self.socket.sendto(command.encode('utf-8'), self.tello_address)
+        self.socket.sendto(command.encode(), self.tello_address)
 
         timer.start()
         while self.response is None:

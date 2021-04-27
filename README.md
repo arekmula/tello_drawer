@@ -33,3 +33,11 @@ pip install -r requirements.txt
 cd h264decoder
 pip install .
 ```
+
+## Using the repository
+### Dataset saver
+```
+python3 dataset_saver.py --local_ip "0.0.0.0" --local_port 8889 --save_img True 
+```
+- Set fps with `--fps` flag
+- Set dataset saving directory with `--save_dir`
