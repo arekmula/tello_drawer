@@ -1,4 +1,5 @@
 import cv2
+import time
 from argparse import ArgumentParser
 from pathlib import Path
 
@@ -10,7 +11,9 @@ def main(args):
 
     # Create directory to save images if it doesn't exists
     if args.save_img:
-        Path(f"{args.save_dir}").mkdir(parents=True, exist_ok=True)
+        timestamp = str(time.time())
+        save_dir = Path(f"{args.save_dir}") / Path(timestamp)
+        save_dir.mkdir(parents=True, exist_ok=True)
 
     fps_delay_ms = int((1 / args.fps) * 1000)
 
@@ -35,7 +38,7 @@ def main(args):
 
             # Save the images
             if args.save_img:
-                cv2.imwrite(f"{args.save_dir}/{save_frame_count:07d}.png", img)
+                cv2.imwrite(f"{str(save_dir)}/{save_frame_count:07d}.png", img)
                 save_frame_count += 1
 
 
