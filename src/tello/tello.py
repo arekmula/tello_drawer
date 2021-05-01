@@ -159,7 +159,7 @@ class Tello:
         if self.response is None:
             response = 'none_response'
         else:
-            response = self.response.decode('utf-8')
+            response = self.response.decode()
 
         self.response = None
 
