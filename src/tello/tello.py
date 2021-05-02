@@ -498,5 +498,27 @@ class Tello:
             z: 20-500
             speed: 10-100
         """
+        x = self._check_limits(x, 20, 500)
+        y = self._check_limits(y, 20, 500)
+        z = self._check_limits(z, 20, 500)
+        speed = self._check_limits(speed, 10, 100)
+
         cmd = f'go {x} {y} {z} {speed}'
         self.send_control_command(cmd)
+
+    def _check_limits(self, x: int, min_lim: int, max_lim: int) -> int:
+        """Check that the value is within the limits
+
+        Args:
+            x (int): Variable to check
+            min_lim (int): Minimum value of the variable
+            max_lim (int): Maximum value of the variable
+
+        Returns:
+            int: Value between min_lim and max_lim
+        """
+        if x > max_lim:
+            x = max_lim
+        if x < min_lim:
+            x = min_lim
+        return x
