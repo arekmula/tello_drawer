@@ -488,3 +488,15 @@ class Tello:
         """
 
         return self.move('up', distance)
+
+    def go_xyz_speed(self, x: int, y: int, z: int, speed: int):
+        """Fly to x y z relative to the current position.
+        Speed defines the traveling speed in cm/s.
+        Arguments:
+            x: 20-500
+            y: 20-500
+            z: 20-500
+            speed: 10-100
+        """
+        cmd = f'go {x} {y} {z} {speed}'
+        self.send_control_command(cmd)
