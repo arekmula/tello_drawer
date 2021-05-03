@@ -7,10 +7,10 @@ from yolo import YOLO
 
 class HandDetector:
 
-    def __init__(self):
+    def __init__(self, image_size=416, confidence=0.2):
         self.yolo = YOLO("models/cross-hands-tiny.cfg", "models/cross-hands-tiny.weights", ["hand"])
-        self.size = 416
-        self.confidence = 0.2
+        self.size = image_size
+        self.confidence = confidence
         self.yolo.size = int(self.size)
         self.yolo.confidence = float(self.confidence)
 
