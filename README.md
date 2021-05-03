@@ -34,6 +34,13 @@ cd h264decoder
 pip install .
 ```
 
+Create 'models' directory
+```
+cd src/inference/
+mkdir models
+```
+Add model config and weights into 'models' directory
+
 ## Using the repository
 ### Dataset saver
 ```
