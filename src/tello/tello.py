@@ -501,22 +501,27 @@ class Tello:
 
         """
 
+        min_movement = 20
+        max_movement = 500
+        min_speed = 10
+        max_speed = 100
+
         if x > 0:
-            x = self._check_limits(x, 20, 500)
+            x = self._check_limits(x, min_movement, max_movement)
         else:
-            x = self._check_limits(x, -500, -20)
+            x = self._check_limits(x, -max_movement, -min_movement)
 
         if y > 0:
-            y = self._check_limits(y, 20, 500)
+            y = self._check_limits(y, min_movement, max_movement)
         else:
-            y = self._check_limits(y, -500, -20)
+            y = self._check_limits(y, -max_movement, -min_movement)
 
         if z > 0:
-            z = self._check_limits(z, 20, 500)
+            z = self._check_limits(z, min_movement, max_movement)
         else:
-            z = self._check_limits(z, -500, -20)
+            z = self._check_limits(z, -max_movement, -min_movement)
 
-        speed = self._check_limits(speed, 10, 100)
+        speed = self._check_limits(speed, min_speed, max_speed)
 
         cmd = f'go {x} {y} {z} {speed}'
         self.send_control_command(cmd)
