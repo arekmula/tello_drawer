@@ -492,15 +492,30 @@ class Tello:
     def go_xyz_speed(self, x: int, y: int, z: int, speed: int):
         """Fly to x y z relative to the current position.
         Speed defines the traveling speed in cm/s.
+        'x', 'y' and 'z' values can't be set between -20 - 20 simultaneously
         Arguments:
-            x: 20-500
-            y: 20-500
-            z: 20-500
-            speed: 10-100
+            x: -500 - 500
+            y: -500 - 500
+            z: -500 - 500
+            speed: 10 - 100
+
         """
-        x = self._check_limits(x, 20, 500)
-        y = self._check_limits(y, 20, 500)
-        z = self._check_limits(z, 20, 500)
+
+        if x > 0:
+            x = self._check_limits(x, 20, 500)
+        else:
+            x = self._check_limits(x, -500, -20)
+
+        if y > 0:
+            y = self._check_limits(y, 20, 500)
+        else:
+            y = self._check_limits(y, -500, -20)
+
+        if z > 0:
+            z = self._check_limits(z, 20, 500)
+        else:
+            z = self._check_limits(z, -500, -20)
+
         speed = self._check_limits(speed, 10, 100)
 
         cmd = f'go {x} {y} {z} {speed}'
