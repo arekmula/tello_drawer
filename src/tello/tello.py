@@ -15,6 +15,10 @@ class Tello:
     FEETS_TO_CMS_MULTIPLIER = 30.48
     METERS_TO_CMS_MULTIPLIER = 100
     SINGLE_PACKET_MAX_BYTES = 1460
+    MIN_MOVEMENT = 20
+    MAX_MOVEMENT = 500
+    MIN_SPEED = 10
+    MAX_SPEED = 100
 
     def __init__(self, local_ip, local_port, imperial=False, command_timeout=.3, tello_ip='192.168.10.1',
                  tello_port=8889):
@@ -501,27 +505,22 @@ class Tello:
 
         """
 
-        min_movement = 20
-        max_movement = 500
-        min_speed = 10
-        max_speed = 100
-
         if x > 0:
-            x = self._check_limits(x, min_movement, max_movement)
+            x = self._check_limits(x, self.MIN_MOVEMENT, self.MAX_MOVEMENT)
         else:
-            x = self._check_limits(x, -max_movement, -min_movement)
+            x = self._check_limits(x, -self.MAX_MOVEMENT, -self.MIN_MOVEMENT)
 
         if y > 0:
-            y = self._check_limits(y, min_movement, max_movement)
+            y = self._check_limits(y, self.MIN_MOVEMENT, self.MAX_MOVEMENT)
         else:
-            y = self._check_limits(y, -max_movement, -min_movement)
+            y = self._check_limits(y, -self.MAX_MOVEMENT, -self.MIN_MOVEMENT)
 
         if z > 0:
-            z = self._check_limits(z, min_movement, max_movement)
+            z = self._check_limits(z, self.MIN_MOVEMENT, self.MAX_MOVEMENT)
         else:
-            z = self._check_limits(z, -max_movement, -min_movement)
+            z = self._check_limits(z, -self.MAX_MOVEMENT, -self.MIN_MOVEMENT)
 
-        speed = self._check_limits(speed, min_speed, max_speed)
+        speed = self._check_limits(speed, self.MIN_SPEED, self.MAX_SPEED)
 
         cmd = f'go {x} {y} {z} {speed}'
         self.send_control_command(cmd)
