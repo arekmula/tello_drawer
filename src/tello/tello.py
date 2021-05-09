@@ -15,6 +15,10 @@ class Tello:
     FEETS_TO_CMS_MULTIPLIER = 30.48
     METERS_TO_CMS_MULTIPLIER = 100
     SINGLE_PACKET_MAX_BYTES = 1460
+    MIN_MOVEMENT = 20
+    MAX_MOVEMENT = 500
+    MIN_SPEED = 10
+    MAX_SPEED = 100
 
     def __init__(self, local_ip, local_port, imperial=False, command_timeout=.3, tello_ip='192.168.10.1',
                  tello_port=8889):
@@ -488,3 +492,52 @@ class Tello:
         """
 
         return self.move('up', distance)
+
+    def go_xyz_speed(self, x: int, y: int, z: int, speed: int):
+        """Fly to x y z relative to the current position.
+        Speed defines the traveling speed in cm/s.
+        'x', 'y' and 'z' values can't be set between -20 - 20 simultaneously
+        Arguments:
+            x: -500 - 500
+            y: -500 - 500
+            z: -500 - 500
+            speed: 10 - 100
+
+        """
+
+        if x > 0:
+            x = self._check_limits(x, self.MIN_MOVEMENT, self.MAX_MOVEMENT)
+        else:
+            x = self._check_limits(x, -self.MAX_MOVEMENT, -self.MIN_MOVEMENT)
+
+        if y > 0:
+            y = self._check_limits(y, self.MIN_MOVEMENT, self.MAX_MOVEMENT)
+        else:
+            y = self._check_limits(y, -self.MAX_MOVEMENT, -self.MIN_MOVEMENT)
+
+        if z > 0:
+            z = self._check_limits(z, self.MIN_MOVEMENT, self.MAX_MOVEMENT)
+        else:
+            z = self._check_limits(z, -self.MAX_MOVEMENT, -self.MIN_MOVEMENT)
+
+        speed = self._check_limits(speed, self.MIN_SPEED, self.MAX_SPEED)
+
+        cmd = f'go {x} {y} {z} {speed}'
+        self.send_control_command(cmd)
+
+    def _check_limits(self, x: int, min_lim: int, max_lim: int) -> int:
+        """Check that the value is within the limits
+
+        Args:
+            x (int): Variable to check
+            min_lim (int): Minimum value of the variable
+            max_lim (int): Maximum value of the variable
+
+        Returns:
+            int: Value between min_lim and max_lim
+        """
+        if x > max_lim:
+            x = max_lim
+        if x < min_lim:
+            x = min_lim
+        return x
