@@ -130,5 +130,8 @@ dmypy.json
 
 *idea
 
+# Data stuff
 *dataset
 *.png
+*.zip
+*.avi

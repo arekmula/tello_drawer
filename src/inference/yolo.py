@@ -14,8 +14,9 @@ class YOLO:
         self.labels = labels
         try:
             self.net = cv2.dnn.readNetFromDarknet(config, model)
-        except:
-            raise ValueError("Couldn't find the models!\nDid you forget to download them manually (and keep in the correct directory, models/) or run the shell script?")
+        except cv2.error:
+            raise ValueError("Couldn't find the models!\nDid you forget to download them manually"
+                             " (and keep in the correct directory, models/) or run the shell script?")
 
     def inference_from_file(self, file):
         mat = cv2.imread(file)

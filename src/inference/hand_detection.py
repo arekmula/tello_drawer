@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 
 import cv2
-
-from yolo import YOLO
+import numpy as np
+from inference.yolo import YOLO
 
 
 class HandDetector:
 
-    def __init__(self, image_size=416, confidence=0.2):
-        self.yolo = YOLO("models/cross-hands-tiny.cfg", "models/cross-hands-tiny.weights", ["hand"])
+    def __init__(self, image_size, confidence, model_dirs):
+
+        self.yolo = YOLO(model_dirs+"cross-hands-tiny.cfg", model_dirs+"cross-hands-tiny.weights",
+                         ["hand"])
         self.size = image_size
         self.confidence = confidence
         self.yolo.size = int(self.size)
@@ -26,7 +28,7 @@ class HandDetector:
         h - boz height
         """
         img_resize = cv2.resize(img, (self.size, self.size))
-
+        image_resize_drawed = np.copy(img_resize)
         width, height, inference_time, results = self.yolo.inference(img_resize)
 
         conf_sum = 0
@@ -44,9 +46,9 @@ class HandDetector:
 
                 # draw a bounding box rectangle and label on the image
                 color = (0, 0, 255)
-                cv2.rectangle(img_resize, (x, y), (x + w, y + h), color, 3)
+                cv2.rectangle(image_resize_drawed, (x, y), (x + w, y + h), color, 3)
                 text = f"{name}, {round(confidence, 2)}"
-                cv2.putText(img_resize, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX,
+                cv2.putText(image_resize_drawed, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX,
                             0.25, color, 1)
 
-        return boxes, img_resize
+        return boxes, img_resize, image_resize_drawed
