@@ -131,6 +131,7 @@ dmypy.json
 *idea
 
 # Data stuff
+models
 *dataset
 *.png
 *.zip

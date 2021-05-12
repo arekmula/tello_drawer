@@ -7,14 +7,18 @@ from inference.yolo import YOLO
 
 class HandDetector:
 
-    def __init__(self, image_size, confidence, model_dirs):
+    def __init__(self, image_size=416, confidence=0.2, model_dirs="models/"):
+        try:
+            self.yolo = YOLO(model_dirs + "cross-hands-tiny.cfg", model_dirs + "cross-hands-tiny.weights",
+                             ["hand"])
+        except OSError as e:
+            raise e
 
-        self.yolo = YOLO(model_dirs+"cross-hands-tiny.cfg", model_dirs+"cross-hands-tiny.weights",
-                         ["hand"])
         self.size = image_size
         self.confidence = confidence
         self.yolo.size = int(self.size)
         self.yolo.confidence = float(self.confidence)
+        print("Detector loaded successfully")
 
     def predict(self, img, should_draw_results):
         """
@@ -52,3 +56,35 @@ class HandDetector:
                             0.25, color, 1)
 
         return boxes, img_resize, image_resize_drawed
+
+    def get_hand_from_img(self, image, boxes, enlargebox_px):
+        hands = []
+
+        for box in boxes:
+            x = box[0]
+            y = box[1]
+            w = box[2]
+            h = box[3]
+            # x, y, w, h = box
+            # enlarge box a bit
+            x -= enlargebox_px
+            y -= enlargebox_px
+            w += enlargebox_px * 2
+            h += enlargebox_px * 2
+
+            bottom_right_x = x + w
+            bottom_right_y = y + h
+
+            if x < 0:
+                x = 0
+            if y < 0:
+                y = 0
+            if bottom_right_x > image.shape[1]:
+                bottom_right_x = image.shape[1]
+            if bottom_right_y > image.shape[0]:
+                bottom_right_y = image.shape[0]
+
+            hand = image[y:bottom_right_y, x:bottom_right_x]
+            hands.append(hand)
+
+        return hands
