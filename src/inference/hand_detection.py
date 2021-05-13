@@ -29,7 +29,7 @@ class HandDetector:
         x - x coordinate
         y - y coordinate
         w - box width
-        h - boz height
+        h - box height
         """
         img_resize = cv2.resize(img, (self.size, self.size))
         image_resize_drawed = np.copy(img_resize)
