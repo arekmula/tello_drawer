@@ -5,7 +5,6 @@ import cv2
 
 
 class HandClassifier:
-    PREPROCESSED = False
 
     def __init__(self, models_dir='models/'):
         try:
@@ -33,5 +32,5 @@ class HandClassifier:
         image_scaled = image_grayscale / 255.
         image_resized = cv2.resize(image_scaled, (int(self.input_shape[1]), int(self.input_shape[2])))
         image_final = image_resized[np.newaxis, :, :, np.newaxis]
-        self.PREPROCESSED = True
+
         return image_final

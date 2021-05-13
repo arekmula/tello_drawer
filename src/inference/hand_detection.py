@@ -7,9 +7,9 @@ from inference.yolo import YOLO
 
 class HandDetector:
 
-    def __init__(self, image_size=416, confidence=0.2, model_dirs="models/"):
+    def __init__(self, image_size=416, confidence=0.2, models_dir="models/"):
         try:
-            self.yolo = YOLO(model_dirs + "cross-hands-tiny.cfg", model_dirs + "cross-hands-tiny.weights",
+            self.yolo = YOLO(models_dir + "cross-hands-tiny.cfg", models_dir + "cross-hands-tiny.weights",
                              ["hand"])
         except OSError as e:
             raise e
