@@ -36,7 +36,7 @@ pip install .
 
 Create 'models' directory
 ```
-cd src/inference/
+cd src
 mkdir models
 ```
 Add model config and weights into 'models' directory
