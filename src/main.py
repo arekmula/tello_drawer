@@ -1,16 +1,17 @@
-import numpy as np
 import cv2
 from argparse import ArgumentParser
 
-from inference import HandClassifier, HandDetector
+from image_processing import ImageProcessor
 from tello import Tello
 
 
-def development_main(image_source, args, hand_detector, hand_classifier):
+def development_main(image_source, args):
     if image_source == "built_camera":
         cap = cv2.VideoCapture(args.camera_index)
     else:
         cap = cv2.VideoCapture(args.filepath)
+
+    image_processor = ImageProcessor()
 
     while cap.isOpened():
         while True:
@@ -22,15 +23,9 @@ def development_main(image_source, args, hand_detector, hand_classifier):
 
             ret, frame = cap.read()
             if ret:
-                boxes, img_resize, image_resize_drawed = hand_detector.predict(img=frame, should_draw_results=True)
-                hands = hand_detector.get_hand_from_img(img_resize, boxes, enlargebox_px=15)
-
-                if len(hands) > 0:
-                    for hand in hands:
-                        prediction = hand_classifier.predict(hand, should_preprocess_input=True)
-                        print("Palm" if np.argmax(prediction) else "Fist")
-
-                cv2.imshow("frame", image_resize_drawed)
+                image_resize_drawed, path_img = image_processor.process_img(frame)
+                frame_and_path = cv2.hconcat([image_resize_drawed, path_img])
+                cv2.imshow("frame", frame_and_path)
             else:
                 break
         break
@@ -44,14 +39,10 @@ def tello_main(args):
 
 
 def main(args):
-    hand_detector = HandDetector()
-    hand_classifier = HandClassifier()
-
     image_source = args.image_source
 
     if image_source == "built_camera" or image_source == "saved_file":
-        development_main(image_source=image_source, args=args,
-                         hand_detector=hand_detector, hand_classifier=hand_classifier)
+        development_main(image_source=image_source, args=args)
     else:
         tello_main(args)
 

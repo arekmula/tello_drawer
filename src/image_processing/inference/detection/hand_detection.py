@@ -9,7 +9,7 @@ class HandDetector:
 
     def __init__(self, image_size=416, confidence=0.2, models_dir="models/"):
         try:
-            self.yolo = YOLO(models_dir + "cross-hands-tiny.cfg", models_dir + "cross-hands-tiny.weights",
+            self.yolo = YOLO(models_dir + "cross-hands-yolov4-tiny.cfg", models_dir + "cross-hands-yolov4-tiny.weights",
                              ["hand"])
         except OSError as e:
             raise e
@@ -57,34 +57,5 @@ class HandDetector:
 
         return boxes, img_resize, image_resize_drawed
 
-    def get_hand_from_img(self, image, boxes, enlargebox_px):
-        hands = []
-
-        for box in boxes:
-            x = box[0]
-            y = box[1]
-            w = box[2]
-            h = box[3]
-            # x, y, w, h = box
-            # enlarge box a bit
-            x -= enlargebox_px
-            y -= enlargebox_px
-            w += enlargebox_px * 2
-            h += enlargebox_px * 2
-
-            bottom_right_x = x + w
-            bottom_right_y = y + h
-
-            if x < 0:
-                x = 0
-            if y < 0:
-                y = 0
-            if bottom_right_x > image.shape[1]:
-                bottom_right_x = image.shape[1]
-            if bottom_right_y > image.shape[0]:
-                bottom_right_y = image.shape[0]
-
-            hand = image[y:bottom_right_y, x:bottom_right_x]
-            hands.append(hand)
-
-        return hands
+    def get_image_size(self):
+        return self.size, self.size, 3
