@@ -23,8 +23,13 @@ def development_main(image_source, args):
 
             ret, frame = cap.read()
             if ret:
-                image_resize_drawed, path_img = image_processor.process_img(frame)
+                image_resize_drawed, path_img, stopped_drawing, drawing_points = image_processor.process_img(frame)
                 frame_and_path = cv2.hconcat([image_resize_drawed, path_img])
+                if stopped_drawing:
+                    cv2.imshow("frame", frame_and_path)
+                    key = cv2.waitKey(0)
+                    break
+
                 cv2.imshow("frame", frame_and_path)
             else:
                 break
@@ -50,8 +55,12 @@ def tello_main(args):
             # The image received from tello is RGB, OpenCV works in BGR format
             frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
 
-            image_resize_drawed, path_img = image_processor.process_img(frame)
+            image_resize_drawed, path_img, stopped_drawing, drawing_points = image_processor.process_img(frame)
             frame_and_path = cv2.hconcat([image_resize_drawed, path_img])
+            if stopped_drawing:
+                cv2.imshow("frame", frame_and_path)
+                key = cv2.waitKey(0)
+                break
             cv2.imshow("frame", frame_and_path)
 
 

@@ -7,7 +7,7 @@ from .inference import HandDetector, HandClassifier
 
 
 class ImageProcessor:
-    def __init__(self, enlargebox_px=15, drawing_state_threshold=0.3, queue_size=20):
+    def __init__(self, enlargebox_px=15, drawing_state_threshold=0.01, queue_size=50):
         self.hand_detector = HandDetector()
         self.hand_classifier = HandClassifier()
 
@@ -21,6 +21,8 @@ class ImageProcessor:
         self.last_box_predictions = Queue(queue_size)
 
         self.drawing_state = False
+        self.drawing_points = []
+        self.stopped_drawing = False
 
     def process_img(self, frame):
         boxes, img_resized, image_resized_boxes = self.hand_detector.predict(img=frame, should_draw_results=True)
@@ -37,19 +39,20 @@ class ImageProcessor:
 
             for box_image, box in zip(boxes_images, boxes):
                 prediction = self.hand_classifier.predict(box_image, should_preprocess_input=True)
-                box_middle = (box[0], box[1])
+                box_middle = [box[0], box[1]]
 
                 self.add_predictions_to_queues(np.argmax(prediction), box_middle)
                 self.calculate_drawing_state()
 
                 if self.drawing_state:
-                    cv2.circle(self.path_image, box_middle, radius=2, color=(0, 255, 0), thickness=-1)
+                    cv2.circle(self.path_image, tuple(box_middle), radius=2, color=(0, 255, 0), thickness=-1)
+                    self.drawing_points.append(box_middle)
                 else:
-                    cv2.circle(self.path_image, box_middle, radius=2, color=(0, 0, 255), thickness=-1)
+                    cv2.circle(self.path_image, tuple(box_middle), radius=2, color=(0, 0, 255), thickness=-1)
                 cv2.putText(image_resized_boxes, f"Drawing state: {self.drawing_state}", org=(0, 20),
                             fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(0, 0, 255))
 
-        return image_resized_boxes, self.path_image
+        return image_resized_boxes, self.path_image, self.stopped_drawing, self.drawing_points
 
     def add_predictions_to_queues(self, class_prediction, box_prediction):
         if not(self.last_class_predictions.full()):
@@ -76,6 +79,8 @@ class ImageProcessor:
         if self.last_class_predictions.full():
             class_predictions_mean = np.mean([item for item in self.last_class_predictions.queue])
             if class_predictions_mean < self.drawing_state_threshold:
+                if self.drawing_state:
+                    self.stopped_drawing = True
                 self.drawing_state = False
             else:
                 self.drawing_state = True
