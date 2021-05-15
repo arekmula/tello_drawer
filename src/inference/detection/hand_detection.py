@@ -2,7 +2,7 @@
 
 import cv2
 import numpy as np
-from inference.yolo import YOLO
+from .yolo import YOLO
 
 
 class HandDetector:

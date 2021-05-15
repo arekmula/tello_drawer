@@ -1,1 +1,2 @@
-from .hand_detection import HandDetector
+from .classification import HandClassifier
+from .detection import HandDetector
