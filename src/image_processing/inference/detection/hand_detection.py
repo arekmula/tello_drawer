@@ -32,7 +32,7 @@ class HandDetector:
         h - box height
         """
         img_resize = cv2.resize(img, (self.size, self.size))
-        image_resize_drawed = np.copy(img_resize)
+        image_resize_drawn = np.copy(img_resize)
         width, height, inference_time, results = self.yolo.inference(img_resize)
 
         conf_sum = 0
@@ -50,12 +50,12 @@ class HandDetector:
 
                 # draw a bounding box rectangle and label on the image
                 color = (0, 0, 255)
-                cv2.rectangle(image_resize_drawed, (x, y), (x + w, y + h), color, 3)
+                cv2.rectangle(image_resize_drawn, (x, y), (x + w, y + h), color, 3)
                 text = f"{name}, {round(confidence, 2)}"
-                cv2.putText(image_resize_drawed, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX,
+                cv2.putText(image_resize_drawn, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX,
                             0.25, color, 1)
 
-        return boxes, img_resize, image_resize_drawed
+        return boxes, img_resize, image_resize_drawn
 
     def get_image_size(self):
         return self.size, self.size, 3
