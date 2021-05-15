@@ -7,12 +7,13 @@ from .inference import HandDetector, HandClassifier
 
 
 class ImageProcessor:
-    def __init__(self, enlargebox_px=15, drawing_state_threshold=0.01, queue_size=50):
+    def __init__(self, enlargebox_px=15, queue_size=20, drawing_state_threshold=0.5, inactivity_std_dev_threshold=20):
         self.hand_detector = HandDetector()
         self.hand_classifier = HandClassifier()
 
         self.enlargebox_pt = enlargebox_px
         self.drawing_state_threshold = drawing_state_threshold
+        self.inactivity_std_dev_threshold = inactivity_std_dev_threshold
 
         self.image_size = self.hand_detector.get_image_size()
         self.path_image = np.zeros(shape=self.image_size, dtype=np.uint8)
@@ -22,7 +23,7 @@ class ImageProcessor:
 
         self.drawing_state = False
         self.drawing_points = []
-        self.stopped_drawing = False
+        self.finish_drawing = False
 
     def process_img(self, frame):
         boxes, img_resized, image_resized_boxes = self.hand_detector.predict(img=frame, should_draw_results=True)
@@ -52,7 +53,10 @@ class ImageProcessor:
                 cv2.putText(image_resized_boxes, f"Drawing state: {self.drawing_state}", org=(0, 20),
                             fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(0, 0, 255))
 
-        return image_resized_boxes, self.path_image, self.stopped_drawing, self.drawing_points
+        if self.finish_drawing:
+            self.normalize_drawing_points()
+
+        return image_resized_boxes, self.path_image, self.finish_drawing, self.drawing_points
 
     def add_predictions_to_queues(self, class_prediction, box_prediction):
         if not(self.last_class_predictions.full()):
@@ -77,10 +81,22 @@ class ImageProcessor:
         :return:
         """
         if self.last_class_predictions.full():
-            class_predictions_mean = np.mean([item for item in self.last_class_predictions.queue])
-            if class_predictions_mean < self.drawing_state_threshold:
+            class_predictions_mean = np.mean([prediction for prediction in self.last_class_predictions.queue])
+            class_bbox_std_dev = np.std([box for box in self.last_box_predictions.queue])
+
+            if (class_predictions_mean < self.drawing_state_threshold) and\
+                    (class_bbox_std_dev < self.inactivity_std_dev_threshold):
                 if self.drawing_state:
-                    self.stopped_drawing = True
+                    # If drawing was previous state and the next one is no drawing, then it means that it's finish
+                    self.finish_drawing = True
                 self.drawing_state = False
             else:
                 self.drawing_state = True
+
+    def normalize_drawing_points(self):
+        self.drawing_points = np.array(self.drawing_points, dtype=np.float)
+        x_max = np.max(self.drawing_points[:, 0])
+        self.drawing_points[:, 0]= self.drawing_points[:, 0] / x_max
+
+        y_max = np.max(self.drawing_points[:, 1])
+        self.drawing_points[:, 1]= self.drawing_points[:, 1] / y_max
