@@ -3,7 +3,7 @@ import time
 from argparse import ArgumentParser
 from pathlib import Path
 
-from tello.tello import Tello
+from tello import Tello
 
 
 def main(args):

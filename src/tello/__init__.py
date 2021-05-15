@@ -1,1 +1,1 @@
-import tello
+from .tello import Tello
