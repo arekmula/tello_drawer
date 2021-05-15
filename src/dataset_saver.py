@@ -29,7 +29,6 @@ def main(args):
 
         img = tello.read()
         if img is not None:
-            img = tello.read()
             # The image received from tello is RGB, OpenCV works in BGR format
             img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 

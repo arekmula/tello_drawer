@@ -36,6 +36,23 @@ def development_main(image_source, args):
 
 def tello_main(args):
     tello = Tello(local_ip=args.local_ip, local_port=args.local_port)
+    image_processor = ImageProcessor()
+
+    while True:
+        key = cv2.waitKey(1)
+        if key & 0xFF == ord("q"):
+            # Exit if q pressed
+            cv2.destroyAllWindows()
+            break
+
+        frame = tello.read()
+        if frame is not None:
+            # The image received from tello is RGB, OpenCV works in BGR format
+            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+
+            image_resize_drawed, path_img = image_processor.process_img(frame)
+            frame_and_path = cv2.hconcat([image_resize_drawed, path_img])
+            cv2.imshow("frame", frame_and_path)
 
 
 def main(args):
