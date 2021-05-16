@@ -7,13 +7,15 @@ from .inference import HandDetector, HandClassifier
 
 
 class ImageProcessor:
-    def __init__(self, enlargebox_px=15, queue_size=20, drawing_state_threshold=0.5, inactivity_std_dev_threshold=20):
-        self.hand_detector = HandDetector()
+    def __init__(self, enlargebox_px=15, queue_size=20, drawing_state_threshold=0.5,
+                 inactivity_std_dev_threshold=4, activity_std_dev_threshold=15):
+        self.hand_detector = HandDetector(confidence=0.6)
         self.hand_classifier = HandClassifier()
 
         self.enlargebox_pt = enlargebox_px
         self.drawing_state_threshold = drawing_state_threshold
         self.inactivity_std_dev_threshold = inactivity_std_dev_threshold
+        self.activity_std_dev_threshold = activity_std_dev_threshold
 
         self.image_size = self.hand_detector.get_image_size()
         self.path_image = np.zeros(shape=self.image_size, dtype=np.uint8)
@@ -76,27 +78,35 @@ class ImageProcessor:
         Calculates drawing state based on last predictions.
 
         self.last_class_predictions is a queue which stores last class predictions (0 for fist <stop signal> and 1
-        for palm <start signal>). If the mean from queue is less than drawing_state_threshold it disables the drawing.
+        for palm <start signal>). If the mean from queue is less than drawing_state_threshold and the hand didn't move
+         it disables the drawing.
 
         :return:
         """
         if self.last_class_predictions.full():
+            # Compute mean of last class predictions. If closer to 0, then it's bigger chance that the Fist occured. If
+            # closer to 1, then it's bigger chance that the Palm occured.
             class_predictions_mean = np.mean([prediction for prediction in self.last_class_predictions.queue])
-            class_bbox_std_dev = np.std([box for box in self.last_box_predictions.queue])
 
+            # Compute standard deviation in last box positions
+            last_box_predictions_array = np.array([box for box in self.last_box_predictions.queue])
+            box_std_dev = np.mean(np.std(last_box_predictions_array, axis=0))
+
+            # If the class prediction is closer to Fist and hand didn't move a lot then drawing state is false
             if (class_predictions_mean < self.drawing_state_threshold) and\
-                    (class_bbox_std_dev < self.inactivity_std_dev_threshold):
+                    (box_std_dev < self.inactivity_std_dev_threshold):
                 if self.drawing_state:
                     # If drawing was previous state and the next one is no drawing, then it means that it's finish
                     self.finish_drawing = True
                 self.drawing_state = False
-            else:
+            # If the class prediction is closer to Palm and hand moved a lot then drawing state si True
+            elif box_std_dev > self.activity_std_dev_threshold:
                 self.drawing_state = True
 
     def normalize_drawing_points(self):
         self.drawing_points = np.array(self.drawing_points, dtype=np.float)
         x_max = np.max(self.drawing_points[:, 0])
-        self.drawing_points[:, 0]= self.drawing_points[:, 0] / x_max
+        self.drawing_points[:, 0] = self.drawing_points[:, 0] / x_max
 
         y_max = np.max(self.drawing_points[:, 1])
-        self.drawing_points[:, 1]= self.drawing_points[:, 1] / y_max
+        self.drawing_points[:, 1] = self.drawing_points[:, 1] / y_max
