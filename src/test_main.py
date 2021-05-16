@@ -1,4 +1,3 @@
-from hand_gesture_recognition import HandClassifier
 from inference import HandDetector
 from hand_gesture_recognition import HandClassifier
 import numpy as np
