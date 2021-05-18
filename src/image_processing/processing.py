@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-from queue import Queue
 
 from .helpers import crop_box
 from .inference import HandDetector, HandClassifier
@@ -8,24 +7,28 @@ from .inference import HandDetector, HandClassifier
 
 class ImageProcessor:
     def __init__(self, enlargebox_px=15, queue_size=20, drawing_state_threshold=0.5,
-                 inactivity_std_dev_threshold=4, activity_std_dev_threshold=15):
+                 inactivity_std_dev_threshold=4, activity_std_dev_lower_threshold=15,
+                 activity_std_dev_upper_threshold=100):
         self.hand_detector = HandDetector(confidence=0.6)
         self.hand_classifier = HandClassifier()
 
         self.enlargebox_pt = enlargebox_px
         self.drawing_state_threshold = drawing_state_threshold
         self.inactivity_std_dev_threshold = inactivity_std_dev_threshold
-        self.activity_std_dev_threshold = activity_std_dev_threshold
+        self.activity_std_dev_lower_threshold = activity_std_dev_lower_threshold
+        self.activity_std_dev_upper_threshold = activity_std_dev_upper_threshold
 
         self.image_size = self.hand_detector.get_image_size()
         self.path_image = np.zeros(shape=self.image_size, dtype=np.uint8)
 
-        self.last_class_predictions = Queue(queue_size)
-        self.last_box_predictions = Queue(queue_size)
+        self.last_class_predictions = []
+        self.last_box_predictions = []
+        self.queue_size = queue_size
 
         self.drawing_state = False
         self.drawing_points = []
         self.finish_drawing = False
+        self.is_outlier = False
 
     def process_img(self, frame):
         boxes, img_resized, image_resized_boxes = self.hand_detector.predict(img=frame, should_draw_results=True)
@@ -47,13 +50,19 @@ class ImageProcessor:
                 self.add_predictions_to_queues(np.argmax(prediction), box_middle)
                 self.calculate_drawing_state()
 
-                if self.drawing_state:
-                    cv2.circle(self.path_image, tuple(box_middle), radius=2, color=(0, 255, 0), thickness=-1)
-                    self.drawing_points.append(box_middle)
+                if not self.is_outlier:
+                    if self.drawing_state:
+                        cv2.circle(self.path_image, tuple(box_middle), radius=2, color=(0, 255, 0), thickness=-1)
+                        self.drawing_points.append(box_middle)
+                    else:
+                        cv2.circle(self.path_image, tuple(box_middle), radius=2, color=(0, 0, 255), thickness=-1)
+                    cv2.putText(image_resized_boxes, f"Drawing state: {self.drawing_state}", org=(0, 20),
+                                fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(0, 0, 255))
                 else:
-                    cv2.circle(self.path_image, tuple(box_middle), radius=2, color=(0, 0, 255), thickness=-1)
-                cv2.putText(image_resized_boxes, f"Drawing state: {self.drawing_state}", org=(0, 20),
-                            fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(0, 0, 255))
+                    # Delete outliers
+                    self.last_class_predictions.pop()
+                    self.last_box_predictions.pop()
+                    self.is_outlier = False
 
         if self.finish_drawing:
             self.normalize_drawing_points()
@@ -61,17 +70,22 @@ class ImageProcessor:
         return image_resized_boxes, self.path_image, self.finish_drawing, self.drawing_points
 
     def add_predictions_to_queues(self, class_prediction, box_prediction):
-        if not(self.last_class_predictions.full()):
-            self.last_class_predictions.put(class_prediction)
+        if not(self.is_queue_full()):
+            self.last_class_predictions.append(class_prediction)
+            self.last_box_predictions.append(box_prediction)
         else:
-            self.last_class_predictions.get()
-            self.last_class_predictions.put(class_prediction)
+            # Delete first element from queue
+            self.last_class_predictions.pop(0)
+            self.last_box_predictions.pop(0)
+            # Add new element to queue
+            self.last_class_predictions.append(class_prediction)
+            self.last_box_predictions.append(box_prediction)
 
-        if not (self.last_box_predictions.full()):
-            self.last_box_predictions.put(box_prediction)
+    def is_queue_full(self):
+        if len(self.last_class_predictions) == self.queue_size and len(self.last_box_predictions) == self.queue_size:
+            return True
         else:
-            self.last_box_predictions.get()
-            self.last_box_predictions.put(box_prediction)
+            return False
 
     def calculate_drawing_state(self):
         """
@@ -83,25 +97,30 @@ class ImageProcessor:
 
         :return:
         """
-        if self.last_class_predictions.full():
+        if self.is_queue_full():
             # Compute mean of last class predictions. If closer to 0, then it's bigger chance that the Fist occured. If
             # closer to 1, then it's bigger chance that the Palm occured.
-            class_predictions_mean = np.mean([prediction for prediction in self.last_class_predictions.queue])
+            class_predictions_mean = np.mean(self.last_class_predictions)
 
             # Compute standard deviation in last box positions
-            last_box_predictions_array = np.array([box for box in self.last_box_predictions.queue])
+            last_box_predictions_array = np.array(self.last_box_predictions)
             box_std_dev = np.mean(np.std(last_box_predictions_array, axis=0))
 
-            # If the class prediction is closer to Fist and hand didn't move a lot then drawing state is false
-            if (class_predictions_mean < self.drawing_state_threshold) and\
-                    (box_std_dev < self.inactivity_std_dev_threshold):
-                if self.drawing_state:
-                    # If drawing was previous state and the next one is no drawing, then it means that it's finish
+            if (class_predictions_mean < self.drawing_state_threshold) \
+                    and (box_std_dev < self.inactivity_std_dev_threshold):
+                if self.drawing_state and not self.is_outlier:
+                    # This is the case when fist is not moving, and previously state was drawing state
                     self.finish_drawing = True
+                # This is the case when Fist is not moving
                 self.drawing_state = False
-            # If the class prediction is closer to Palm and hand moved a lot then drawing state si True
-            elif box_std_dev > self.activity_std_dev_threshold:
-                self.drawing_state = True
+
+            elif class_predictions_mean > self.drawing_state_threshold:
+                if self.activity_std_dev_lower_threshold < box_std_dev < self.activity_std_dev_upper_threshold:
+                    # This is the case when Palm is moving normally
+                    self.drawing_state = True
+                elif box_std_dev > self.activity_std_dev_upper_threshold:
+                    # This is the case when Palm had a huge move. We classify this as a outlier
+                    self.is_outlier = True
 
     def normalize_drawing_points(self):
         self.drawing_points = np.array(self.drawing_points, dtype=np.float)
