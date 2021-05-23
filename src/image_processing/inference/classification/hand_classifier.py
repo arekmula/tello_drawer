@@ -18,6 +18,11 @@ class HandClassifier:
         print("Classifier loaded successfully")
 
     def predict(self, input: np.array, should_preprocess_input) -> np.array:
+        """
+        :param input:
+        :param should_preprocess_input:
+        :return: array with class probabilities where 0 index is Fist and 1 index is Palm
+        """
         if should_preprocess_input:
             input = self.preprocess_input(input)
 
