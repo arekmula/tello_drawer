@@ -45,7 +45,7 @@ class ImageProcessor:
 
             for box_image, box in zip(boxes_images, boxes):
                 prediction = self.hand_classifier.predict(box_image, should_preprocess_input=True)
-                box_middle = [box[0], box[1]]
+                box_middle = [int(box[0] + box[2]/2), int(box[1]+box[3]/2)]
 
                 self.add_predictions_to_queues(np.argmax(prediction), box_middle)
                 self.calculate_drawing_state()
