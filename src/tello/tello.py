@@ -3,7 +3,7 @@ import threading
 import time
 import numpy as np
 import h264decoder
-
+from .helpers import check_limits
 
 class Tello:
     """Wrapper class to interact with the Tello drone."""
@@ -506,38 +506,32 @@ class Tello:
         """
 
         if x > 0:
-            x = self._check_limits(x, self.MIN_MOVEMENT, self.MAX_MOVEMENT)
+            x = check_limits(x, self.MIN_MOVEMENT, self.MAX_MOVEMENT)
         else:
-            x = self._check_limits(x, -self.MAX_MOVEMENT, -self.MIN_MOVEMENT)
+            x = check_limits(x, -self.MAX_MOVEMENT, -self.MIN_MOVEMENT)
 
         if y > 0:
-            y = self._check_limits(y, self.MIN_MOVEMENT, self.MAX_MOVEMENT)
+            y = check_limits(y, self.MIN_MOVEMENT, self.MAX_MOVEMENT)
         else:
-            y = self._check_limits(y, -self.MAX_MOVEMENT, -self.MIN_MOVEMENT)
+            y = check_limits(y, -self.MAX_MOVEMENT, -self.MIN_MOVEMENT)
 
         if z > 0:
-            z = self._check_limits(z, self.MIN_MOVEMENT, self.MAX_MOVEMENT)
+            z = check_limits(z, self.MIN_MOVEMENT, self.MAX_MOVEMENT)
         else:
-            z = self._check_limits(z, -self.MAX_MOVEMENT, -self.MIN_MOVEMENT)
+            z = check_limits(z, -self.MAX_MOVEMENT, -self.MIN_MOVEMENT)
 
-        speed = self._check_limits(speed, self.MIN_SPEED, self.MAX_SPEED)
+        speed = check_limits(speed, self.MIN_SPEED, self.MAX_SPEED)
 
         cmd = f'go {x} {y} {z} {speed}'
-        self.send_control_command(cmd)
+        self.send_command(cmd)
 
-    def _check_limits(self, x: int, min_lim: int, max_lim: int) -> int:
-        """Check that the value is within the limits
+    def rc_control(self, left_right_speed, forw_back_speed, up_down_speed, yaw_speed):
 
-        Args:
-            x (int): Variable to check
-            min_lim (int): Minimum value of the variable
-            max_lim (int): Maximum value of the variable
+        left_right_speed = check_limits(left_right_speed, -self.MAX_SPEED, self.MAX_SPEED)
+        forw_back_speed = check_limits(forw_back_speed, -self.MAX_SPEED, self.MAX_SPEED)
+        up_down_speed = check_limits(up_down_speed, -self.MAX_SPEED, self.MAX_SPEED)
+        yaw_speed = check_limits(yaw_speed, -self.MAX_SPEED, self.MAX_SPEED)
 
-        Returns:
-            int: Value between min_lim and max_lim
-        """
-        if x > max_lim:
-            x = max_lim
-        if x < min_lim:
-            x = min_lim
-        return x
+        cmd = f'rc {left_right_speed} {forw_back_speed} {up_down_speed} {yaw_speed}'
+        self.send_command(cmd)
+
