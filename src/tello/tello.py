@@ -20,7 +20,7 @@ class Tello:
     MIN_SPEED = 10
     MAX_SPEED = 100
 
-    def __init__(self, local_ip, local_port, imperial=False, command_timeout=.3, tello_ip='192.168.10.1',
+    def __init__(self, local_ip, local_port, imperial=False, command_timeout=5, tello_ip='192.168.10.1',
                  tello_port=8889):
         """
         Binds to the local IP/port and puts the Tello into command mode.
