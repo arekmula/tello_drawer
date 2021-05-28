@@ -29,7 +29,7 @@ class DroneSteering:
             if dst <= self.max_distance:
                 temp_list.append(dist)
             else:
-                ang = np.tan2(dist[0], dist[1])
+                ang = np.arctan2(dist[0], dist[1])
                 maximum_move = [self.max_distance*np.sin(ang), self.max_distance * np.cos(ang)]
                 last_point = dist
                 for i in range(int(dst / self.max_distance)):
