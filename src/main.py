@@ -2,7 +2,10 @@ import cv2
 from argparse import ArgumentParser
 
 from image_processing import ImageProcessor
-from tello import Tello
+from djitellopy import Tello
+from drone_steering import DroneSteering
+import time
+import numpy as np
 
 
 def development_main(image_source, args):
@@ -38,10 +41,16 @@ def development_main(image_source, args):
     cap.release()
     cv2.destroyAllWindows()
 
+    drone_steering = DroneSteering(max_area=100, max_speed=10, signal_period=1)
+    speed_values = drone_steering.calculate_speed(drawing_points)
+
 
 def tello_main(args):
-    tello = Tello(local_ip=args.local_ip, local_port=args.local_port)
     image_processor = ImageProcessor()
+    tello = Tello()
+    tello.connect()
+    tello.streamon()
+    tello.takeoff()
 
     while True:
         key = cv2.waitKey(1)
@@ -50,10 +59,8 @@ def tello_main(args):
             cv2.destroyAllWindows()
             break
 
-        frame = tello.read()
+        frame = tello.get_frame_read().frame
         if frame is not None:
-            # The image received from tello is RGB, OpenCV works in BGR format
-            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
 
             image_resize_drawed, path_img, finish_drawing, drawing_points = image_processor.process_img(frame)
             frame_and_path = cv2.hconcat([image_resize_drawed, path_img])
@@ -62,6 +69,16 @@ def tello_main(args):
                 key = cv2.waitKey(0)
                 break
             cv2.imshow("frame", frame_and_path)
+
+    # drone_steering = DroneSteering(max_area=100, max_speed=10, signal_period=1)
+    # speed_values = drone_steering.calculate_speed(drawing_points)
+    #
+    # for speed_value in speed_values:
+    #     tello.send_rc_control(speed_value[0], 0, speed_value[1])
+
+    # points_in_space = drone_steering.rescale_points(drawing_points, is_int=True)
+    # moving_points = name_to_change(points_in_space)
+    # print(moving_points)
 
 
 def main(args):
@@ -76,7 +93,7 @@ def main(args):
 if __name__ == '__main__':
     parser = ArgumentParser()
 
-    parser.add_argument("--image_source", metavar="image_source", type=str, default="built_camera",
+    parser.add_argument("--image_source", metavar="image_source", type=str, default="tello",
                         choices=["built_camera", "saved_file", "tello"])
     args, _ = parser.parse_known_args()
     if args.image_source == "saved_file":
