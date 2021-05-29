@@ -1,5 +1,5 @@
 import numpy as np
-
+import time
 
 def convert_to_distance_in_xy(point_list):
     temp_list = []
@@ -17,3 +17,5 @@ def convert_to_euclidean_distance(point_list):
 
 def distance(point1, point2):
     return np.sqrt((point2[1] - point1[1]) ** 2 + (point2[0] - point1[0]) ** 2)
+
+
