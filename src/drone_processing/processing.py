@@ -7,7 +7,9 @@ from djitellopy import Tello
 from .helpers import distance
 
 
-class DroneSteering:
+class DroneProcessor:
+    FINISH_DRAWING_HOLD_TIME_S = 2
+
     def __init__(self, max_area_cm=100, starting_move_up_cm=50, min_length_between_points_cm=5,
                  max_speed=30):
         """
@@ -26,10 +28,52 @@ class DroneSteering:
         self.tello.takeoff()
         self.tello.move_up(starting_move_up_cm)
 
+        self.tello_ping_thread = Thread(target=self.ping_tello)
         self.should_stop_pinging_tello = False
 
-    def get_tello_instance(self) -> Tello:
-        return self.tello
+    def get_last_frame(self):
+        return self.tello.get_frame_read().frame
+
+    def finish_drawing(self):
+        """
+        Finish drawing, by stopping drone in air for a while and then force it to land. Disable video streaming.
+
+        :return:
+        """
+        self.tello.send_rc_control(0, 0, 0, 0)
+        time.sleep(self.FINISH_DRAWING_HOLD_TIME_S)
+        self.tello.land()
+        self.tello.streamoff()
+
+    def ping_tello(self):
+        """
+        Ping tello to prevent it from landing while drawing.
+
+        :return:
+        """
+        while True:
+            time.sleep(1)
+            self.tello.send_command_with_return("command")
+            print(f"Battery level: {self.tello.get_battery()}")
+            if self.should_stop_pinging_tello:
+                break
+
+    def start_pinging_tello(self):
+        """
+        Starts thread that pings Tello drone, to prevent it from landing while drawing
+
+        :return:
+        """
+        self.tello_ping_thread.start()
+
+    def stop_pinging_tello(self):
+        """
+        Stop pinging tello to make it available to control
+
+        :return:
+        """
+        self.should_stop_pinging_tello = True
+        self.tello_ping_thread.join()
 
     def rescale_points(self, point_list, is_int=False):
         """
@@ -50,32 +94,6 @@ class DroneSteering:
                     temp_point.append(coordinate)
             temp_list.append(temp_point)
         return temp_list
-
-    def ping_tello(self):
-        while True:
-            time.sleep(1)
-            self.tello.send_command_with_return("command")
-            print(f"Battery level: {self.tello.get_battery()}")
-            if self.should_stop_pinging_tello:
-                break
-
-    def start_pinging_tello(self):
-        """
-        Starts thread that pings Tello drone, to prevent it from landing while drawing
-
-        :return:
-        """
-        self.tello_ping_thread = Thread(target=self.ping_tello)
-        self.tello_ping_thread.start()
-
-    def stop_pinging_tello(self):
-        """
-        Stop pinging tello to make it available to control
-
-        :return:
-        """
-        self.should_stop_pinging_tello = True
-        self.tello_ping_thread.join()
 
     def discrete_path(self, rescaled_points):
         """
@@ -105,12 +123,19 @@ class DroneSteering:
         return discrete_path
 
     def reproduce_discrete_path_by_drone(self, discrete_path):
-        for current_move in discrete_path:
-            ang = np.arctan2(current_move[0], current_move[1])
+        """
+        Converts discrete path to velocity commands and sends them to drone, so the drone reproduce the path
+
+        :param discrete_path: list of [x, y] points, which represents distance in each axis between previous point in
+         list
+        :return:
+        """
+        for current_point in discrete_path:
+            ang = np.arctan2(current_point[0], current_point[1])
             x_speed = int(np.sin(ang) * self.max_speed)
             y_speed = -int(np.cos(ang) * self.max_speed)
 
-            c = (current_move[0] ** 2 + current_move[1] ** 2) ** 0.5
-            move_time = c / self.max_speed
+            euclidean_distance = (current_point[0] ** 2 + current_point[1] ** 2) ** 0.5
+            move_time = euclidean_distance / self.max_speed
             self.tello.send_rc_control(x_speed, 0, y_speed, 0)
             time.sleep(move_time)
