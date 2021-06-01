@@ -3,12 +3,13 @@ import time
 from argparse import ArgumentParser
 from pathlib import Path
 
-from tello import Tello
+from djitellopy import Tello
 
 
 def main(args):
-    tello = Tello(local_ip=args.local_ip, local_port=args.local_port)
-
+    tello = Tello()
+    tello.connect()
+    tello.streamon()
     # Create directory to save images if it doesn't exists
     if args.save_img:
         timestamp = str(time.time())
@@ -27,10 +28,8 @@ def main(args):
             cv2.destroyAllWindows()
             break
 
-        img = tello.read()
+        img = tello.get_frame_read().frame
         if img is not None:
-            # The image received from tello is RGB, OpenCV works in BGR format
-            img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
             # Show the image
             cv2.imshow("tello", img)
@@ -44,8 +43,6 @@ def main(args):
 if __name__ == "__main__":
     parser = ArgumentParser()
 
-    parser.add_argument("--local_ip", metavar="local_ip", type=str, required=True)
-    parser.add_argument("--local_port", metavar="local_port", type=int, required=True)
     parser.add_argument("--save_img", metavar="save_img", type=bool, default=False)
     parser.add_argument("--save_dir", metavar="save_dir", type=str, default="dataset")
     parser.add_argument("--fps", metavar="fps", type=int, default=30)
