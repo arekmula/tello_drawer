@@ -7,12 +7,20 @@ from drone_processing import DroneProcessor, convert_to_distance_in_xy
 
 
 def development_main(image_source, args):
+    """
+    Main function used to development using built-in camera or file.
+
+    :param image_source:
+    :param args:
+    :return:
+    """
     if image_source == "built_camera":
         cap = cv2.VideoCapture(args.camera_index)
     else:
         cap = cv2.VideoCapture(args.filepath)
 
-    image_processor = ImageProcessor()
+    image_processor = ImageProcessor(finish_drawing_sign=args.finish_drawing,
+                                     hand_detector_confidence=args.hand_detection_confidence)
 
     while cap.isOpened():
         while True:
@@ -39,14 +47,18 @@ def development_main(image_source, args):
     cap.release()
     cv2.destroyAllWindows()
 
-    drone_steering = DroneProcessor(max_area_cm=100)
-    # speed_values = drone_processing.calculate_speed(drawing_points)
-    rescaled_points = drone_steering.rescale_points(drawing_points)
-
 
 def tello_main(args):
-    image_processor = ImageProcessor()
-    drone_processor = DroneProcessor(max_area_cm=args.max_area, min_length_between_points_cm=args.min_length)
+    """
+    Main function used to control your drone using hand.
+
+    :param args:
+    :return:
+    """
+    image_processor = ImageProcessor(finish_drawing_sign=args.finish_drawing,
+                                     hand_detector_confidence=args.hand_detection_confidence)
+    drone_processor = DroneProcessor(max_area_cm=args.max_area, min_length_between_points_cm=args.min_length,
+                                     starting_move_up_cm=args.takeoff_offset)
 
     # Start pinigng tello to prevent it from landing
     drone_processor.start_pinging_tello()
@@ -85,6 +97,10 @@ def tello_main(args):
 def main(args):
     image_source = args.image_source
 
+    print(f"Image source: {args.image_source}")
+    print(f"Finish drawing sign: {args.finish_drawing}")
+    print(f"Hand detection confidence: {args.hand_detection_confidence}")
+
     if image_source == "built_camera" or image_source == "saved_file":
         development_main(image_source=image_source, args=args)
     else:
@@ -96,16 +112,25 @@ if __name__ == '__main__':
 
     parser.add_argument("--image_source", metavar="image_source", type=str, default="tello",
                         choices=["built_camera", "saved_file", "tello"])
+    parser.add_argument("--finish_drawing", metavar="finish_drawing", type=str, default="two_hands",
+                        choices=["two_hands", "fist"], help="Finish drawing sign")
     args, _ = parser.parse_known_args()
     if args.image_source == "saved_file":
         parser.add_argument("--filepath", metavar="filepath", type=str, required=True)
     elif args.image_source == "built_camera":
         parser.add_argument("--camera_index", metavar="camera_index", type=int, default=0)
     elif args.image_source == "tello":
-        parser.add_argument("--local_ip", metavar="local_ip", type=str, default="0.0.0.0")
-        parser.add_argument("--local_port", metavar="local_port", type=int, default=8889)
-        parser.add_argument("--max_area", metavar="max_area", type=int, default=100)
-        parser.add_argument("--min_length", metavar="min_length", type=int, default=5)
+        parser.add_argument("--max_area", metavar="max_area", type=int, default=100,
+                            help="The max area [cm] that drone can use to perform the drawing")
+        parser.add_argument("--min_length", metavar="min_length", type=int, default=5,
+                            help="Minimum length between points, to reduce number of points from detection")
+        parser.add_argument("--takeoff_offset", metavar="takeoff_offset", type=int, default=50,
+                            help="Takeoff move up offset in cm.")
+
+    parser.add_argument("--hand_detection_confidence", metavar="hand_detection_confidence",
+                        type=float, default=0.6 if args.finish_drawing == "fist" else 0.85,
+                        help="The confidence for hand detector should be lower, because we have to detect fist also."
+                             "For two hands detector the confidence has to be higher to get rid of false positives.")
 
     args, _ = parser.parse_known_args()
 
