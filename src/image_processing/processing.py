@@ -127,9 +127,14 @@ class ImageProcessor:
                     self.is_outlier = True
 
     def normalize_drawing_points(self):
-        self.drawing_points = np.array(self.drawing_points, dtype=np.float)
-        x_max = np.max(self.drawing_points[:, 0])
-        self.drawing_points[:, 0] = self.drawing_points[:, 0] / x_max
+        try:
+            self.drawing_points = np.array(self.drawing_points, dtype=np.float)
+            x_max = np.max(self.drawing_points[:, 0])
+            self.drawing_points[:, 0] = self.drawing_points[:, 0] / x_max
 
-        y_max = np.max(self.drawing_points[:, 1])
-        self.drawing_points[:, 1] = self.drawing_points[:, 1] / y_max
+            y_max = np.max(self.drawing_points[:, 1])
+            self.drawing_points[:, 1] = self.drawing_points[:, 1] / y_max
+
+        except IndexError as e:
+            print("[HINT]: There was no points to normalize. Draw some shape before drawing stops")
+            raise e

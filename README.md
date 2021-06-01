@@ -5,20 +5,24 @@ The drone stays in the air and watches your hand by the camera.
 The images from the camera are being sent to the PC, where your hand and its pose are detected.
 The detected hand movement is then converted to drone steering commands which makes the drone replicate your movement.
 
-**TODO**: Add images and information which gesture means what
+## Steering
+- Palm -> Drawing
+- Fist -> Stop drawing
+- Two hands -> Stop Drawing
 
+![alt text](pictures/palm.png "PALM GESTURE")
+![alt text](pictures/fist.png  "FIST GESTURE")
+
+## Performance
+![Alt Text](pictures/performance.gif)
 ## Prerequisites
 - Python 3.8
 
-There are some required packages to install on the PC. Run the following command to install them
-```
-sudo apt install libswscale-dev libavcodec-dev libavutil-dev python3-virtualenv
-```
 
 ## Cloning the repository
 To clone the repository use the following lines
 ```
-git clone --recurse-submodules https://github.com/arekmula/tello_drawer
+git clone https://github.com/arekmula/tello_drawer
 cd tello_drawer
 ```
 
@@ -31,8 +35,6 @@ source venv/bin/activate
 Install requirements
 ```
 pip install -r requirements.txt
-cd h264decoder
-pip install .
 ```
 
 Create `models` directory
@@ -76,5 +78,5 @@ We haven't made any changes to the detector.
 
 ### Hand classification
 We have to split the hand detections into 2 separate classes.
-The fist is responsible for the start/stop signal while the palm is responsible for drawing. To do so we created classificator: 
-**TODO**
+The fist is responsible for the start/stop signal while the palm is responsible for drawing. To do so we created 
+classifier based on pretrained EfficientNetB0. Date base is available [here](https://www.gti.ssr.upm.es/data/HandGesture_database.html)
