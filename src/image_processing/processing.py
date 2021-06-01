@@ -39,30 +39,34 @@ class ImageProcessor:
                 # TODO: Handle it better
                 # If there's more than one hand, get right hand
                 # Right hand has minimum x value
-                right_hand_index = np.argmin([box[0] for box in boxes])
-                boxes_images = [boxes_images[right_hand_index]]
-                boxes = [boxes[right_hand_index]]
+                # right_hand_index = np.argmin([box[0] for box in boxes])
+                # boxes_images = [boxes_images[right_hand_index]]
+                # boxes = [boxes[right_hand_index]]
+                self.finish_drawing = True
 
-            for box_image, box in zip(boxes_images, boxes):
-                prediction = self.hand_classifier.predict(box_image, should_preprocess_input=True)
-                box_middle = [int(box[0] + box[2]/2), int(box[1]+box[3]/2)]
+            if not self.finish_drawing:
+                for idx, (box_image, box) in enumerate(zip(boxes_images, boxes)):
+                    prediction = self.hand_classifier.predict(box_image, should_preprocess_input=True)
+                    box_middle = [int(box[0] + box[2]/2), int(box[1]+box[3]/2)]
 
-                self.add_predictions_to_queues(np.argmax(prediction), box_middle)
-                self.calculate_drawing_state()
+                    self.add_predictions_to_queues(np.argmax(prediction), box_middle)
+                    self.calculate_drawing_state()
 
-                if not self.is_outlier:
-                    if self.drawing_state:
-                        cv2.circle(self.path_image, tuple(box_middle), radius=2, color=(0, 255, 0), thickness=-1)
-                        self.drawing_points.append(box_middle)
+                    if not self.is_outlier:
+                        if self.drawing_state:
+                            cv2.circle(self.path_image, tuple(box_middle), radius=2, color=(0, 255, 0), thickness=-1)
+                            cv2.putText(self.path_image, str(idx), tuple(box_middle), fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                                        fontScale=1, color=(255, 0, 0))
+                            self.drawing_points.append(box_middle)
+                        else:
+                            cv2.circle(self.path_image, tuple(box_middle), radius=2, color=(0, 0, 255), thickness=-1)
+                        cv2.putText(image_resized_boxes, f"Drawing state: {self.drawing_state}", org=(0, 20),
+                                    fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(0, 0, 255))
                     else:
-                        cv2.circle(self.path_image, tuple(box_middle), radius=2, color=(0, 0, 255), thickness=-1)
-                    cv2.putText(image_resized_boxes, f"Drawing state: {self.drawing_state}", org=(0, 20),
-                                fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(0, 0, 255))
-                else:
-                    # Delete outliers
-                    self.last_class_predictions.pop()
-                    self.last_box_predictions.pop()
-                    self.is_outlier = False
+                        # Delete outliers
+                        self.last_class_predictions.pop()
+                        self.last_box_predictions.pop()
+                        self.is_outlier = False
 
         if self.finish_drawing:
             self.normalize_drawing_points()
