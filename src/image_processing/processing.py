@@ -6,16 +6,45 @@ from .inference import HandDetector, HandClassifier
 
 
 class ImageProcessor:
-    def __init__(self, enlargebox_px=15, queue_size=20, drawing_state_threshold=0.5,
-                 inactivity_std_dev_threshold=4, activity_std_dev_lower_threshold=15,
+    TWO_HANDS_FINISH = 0
+    FIST_FINISH = 1
+
+    MINIMUM_QUEUE_SIZE = 5
+
+    def __init__(self, finish_drawing_sign, hand_detector_confidence, enlargebox_px=15, predictions_queue_size=20,
+                 drawing_state_threshold=0.5, inactivity_std_dev_threshold=4, activity_std_dev_lower_threshold=15,
                  activity_std_dev_upper_threshold=100):
-        self.hand_detector = HandDetector(confidence=0.6)
-        self.hand_classifier = HandClassifier()
+        """
+
+        :param finish_drawing_sign: Sign for finish drawing. Two hands or fist.
+        :param hand_detector_confidence: The minimal confidence for hand detector to classify detection as hand.
+        :param enlargebox_px: How much pixels should be added in each side to hand bbox to make it easier to classify.
+        :param predictions_queue_size: Size of last predictions queue.
+        :param drawing_state_threshold: Threshold of how many of the last predictions stored in the queue must be
+         assigned to either of the class to determine which class it is.
+        :param inactivity_std_dev_threshold: A maximum threshold of movement's standard deviation
+         to determine if stop sign appeared.
+        :param activity_std_dev_lower_threshold: A minimum threshold of movement's standard deviation to determine if
+        hand is in drawing state
+        :param activity_std_dev_upper_threshold: A maximum threshold of movement's standard deviation to determine if
+        hand is in drawing state and if it's not outlier.
+        """
+
+        self.finish_drawing_sign = self.TWO_HANDS_FINISH if finish_drawing_sign == "two_hands" else self.FIST_FINISH
+
+        if self.finish_drawing_sign == self.FIST_FINISH:
+            # Hand classifier is need only if we have selected finishing drawing by a fist
+            self.hand_classifier = HandClassifier()
+
+        self.hand_detector = HandDetector(confidence=hand_detector_confidence)
 
         self.enlargebox_pt = enlargebox_px
         self.drawing_state_threshold = drawing_state_threshold
         self.inactivity_std_dev_threshold = inactivity_std_dev_threshold
-        self.activity_std_dev_lower_threshold = activity_std_dev_lower_threshold
+        # When using fist finishing, the minimal standard deviation in movement has to be at some threshold, otherwise
+        # the standing palm hand might be classified as Fist, and the drawing might be finished.
+        self.activity_std_dev_lower_threshold = activity_std_dev_lower_threshold if\
+            self.finish_drawing_sign == self.FIST_FINISH else 0
         self.activity_std_dev_upper_threshold = activity_std_dev_upper_threshold
 
         self.image_size = self.hand_detector.get_image_size()
@@ -23,7 +52,10 @@ class ImageProcessor:
 
         self.last_class_predictions = []
         self.last_box_predictions = []
-        self.queue_size = queue_size
+        # When using fist finishing, the queue_size needs to be bigger, so more last predictions
+        # are used to determine if it was Fist or Palm
+        self.predictions_queue_size = predictions_queue_size if self.finish_drawing_sign == self.FIST_FINISH else\
+            self.MINIMUM_QUEUE_SIZE
 
         self.drawing_state = False
         self.drawing_points = []
@@ -36,26 +68,34 @@ class ImageProcessor:
 
         if len(boxes_images) > 0:
             if len(boxes_images) > 1:
-                # TODO: Handle it better
-                # If there's more than one hand, get right hand
-                # Right hand has minimum x value
-                # right_hand_index = np.argmin([box[0] for box in boxes])
-                # boxes_images = [boxes_images[right_hand_index]]
-                # boxes = [boxes[right_hand_index]]
-                self.finish_drawing = True
+                if self.finish_drawing_sign == self.TWO_HANDS_FINISH:
+                    # Finish drawing if two hands were detected.
+                    self.finish_drawing = True
+                else:
+                    # If there's more than one hand, get right hand
+                    # Right hand has minimum x value
+                    right_hand_index = np.argmin([box[0] for box in boxes])
+                    boxes_images = [boxes_images[right_hand_index]]
+                    boxes = [boxes[right_hand_index]]
 
             if not self.finish_drawing:
-                for idx, (box_image, box) in enumerate(zip(boxes_images, boxes)):
-                    prediction = self.hand_classifier.predict(box_image, should_preprocess_input=True)
-                    box_middle = [int(box[0] + box[2]/2), int(box[1]+box[3]/2)]
+                for box_image, box in zip(boxes_images, boxes):
 
+                    if self.finish_drawing_sign == self.FIST_FINISH:
+                        prediction = self.hand_classifier.predict(box_image, should_preprocess_input=True)
+                    else:
+                        # Create mock prediction from classifier, so it always thinks that it's palm
+                        prediction = [0, 1]
+
+                    box_middle = [int(box[0] + box[2]/2), int(box[1]+box[3]/2)]
                     self.add_predictions_to_queues(np.argmax(prediction), box_middle)
                     self.calculate_drawing_state()
 
                     if not self.is_outlier:
                         if self.drawing_state:
                             cv2.circle(self.path_image, tuple(box_middle), radius=2, color=(0, 255, 0), thickness=-1)
-                            cv2.putText(self.path_image, str(idx), tuple(box_middle), fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                            cv2.putText(self.path_image, str(len(self.drawing_points)), tuple(box_middle),
+                                        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                                         fontScale=1, color=(255, 0, 0))
                             self.drawing_points.append(box_middle)
                         else:
@@ -86,7 +126,8 @@ class ImageProcessor:
             self.last_box_predictions.append(box_prediction)
 
     def is_queue_full(self):
-        if len(self.last_class_predictions) == self.queue_size and len(self.last_box_predictions) == self.queue_size:
+        if len(self.last_class_predictions) == self.predictions_queue_size and\
+                len(self.last_box_predictions) == self.predictions_queue_size:
             return True
         else:
             return False
