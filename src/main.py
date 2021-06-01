@@ -93,6 +93,8 @@ def tello_main(args):
     # Finish drawing
     drone_processor.finish_drawing()
 
+    cv2.destroyAllWindows()
+
 
 def main(args):
     image_source = args.image_source
