@@ -16,14 +16,10 @@ by providing `finish_drawing` argument while running the script.:
 ![alt text](pictures/fist.png  "FIST GESTURE")
 
 ## Performance
-![Alt Text](pictures/ezgif.com-gif-maker.gif)
+![Alt Text](pictures/performance.gif)
 ## Prerequisites
 - Python 3.8
 
-There are some required packages to install on the PC. Run the following command to install them
-```
-sudo apt install libswscale-dev libavcodec-dev libavutil-dev python3-virtualenv
-```
 
 ## Cloning the repository
 To clone the repository use the following lines
